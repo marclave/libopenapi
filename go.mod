@@ -1,4 +1,4 @@
-module github.com/marclave/libopenapi
+module github.com/pb33f/libopenapi
 
 go 1.18
 
