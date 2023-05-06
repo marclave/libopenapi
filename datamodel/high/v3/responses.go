@@ -5,11 +5,12 @@ package v3
 
 import (
 	"fmt"
+	"sort"
+
 	"github.com/pb33f/libopenapi/datamodel/high"
 	low "github.com/pb33f/libopenapi/datamodel/low/v3"
 	"github.com/pb33f/libopenapi/utils"
 	"gopkg.in/yaml.v3"
-	"sort"
 )
 
 // Responses represents a high-level OpenAPI 3+ Responses object that is backed by a low-level one.
@@ -25,7 +26,7 @@ import (
 //
 // The Responses Object MUST contain at least one response code, and if only one response code is provided it SHOULD
 // be the response for a successful operation call.
-//  - https://spec.openapis.org/oas/v3.1.0#responses-object
+//   - https://spec.openapis.org/oas/v3.1.0#responses-object
 type Responses struct {
 	Codes      map[string]*Response `json:"-" yaml:"-"`
 	Default    *Response            `json:"default,omitempty" yaml:"default,omitempty"`
@@ -89,6 +90,71 @@ func (r *Responses) GoLowUntyped() any {
 // Render will return a YAML representation of the Responses object as a byte slice.
 func (r *Responses) Render() ([]byte, error) {
 	return yaml.Marshal(r)
+}
+
+// Render will return a YAML representation of the Responses object as a byte slice.
+func (r *Responses) RenderInline() ([]byte, error) {
+	d, _ := r.MarshalYAMLInline()
+	return yaml.Marshal(d)
+}
+
+// MarshalYAML will create a ready to render YAML representation of the Responses object.
+func (r *Responses) MarshalYAMLInline() (interface{}, error) {
+	// map keys correctly.
+	m := utils.CreateEmptyMapNode()
+	type responseItem struct {
+		resp *Response
+		code string
+		line int
+		ext  *yaml.Node
+	}
+	var mapped []*responseItem
+
+	for k, re := range r.Codes {
+		ln := 9999 // default to a high value to weight new content to the bottom.
+		if r.low != nil {
+			for lKey := range r.low.Codes {
+				if lKey.Value == k {
+					ln = lKey.KeyNode.Line
+				}
+			}
+		}
+		mapped = append(mapped, &responseItem{re, k, ln, nil})
+	}
+
+	// extract extensions
+	nb := high.NewNodeBuilder(r, r.low)
+	nb.Resolve = true
+	extNode := nb.Render()
+	if extNode != nil && extNode.Content != nil {
+		var label string
+		for u := range extNode.Content {
+			if u%2 == 0 {
+				label = extNode.Content[u].Value
+				continue
+			}
+			mapped = append(mapped, &responseItem{nil, label,
+				extNode.Content[u].Line, extNode.Content[u]})
+		}
+	}
+
+	sort.Slice(mapped, func(i, j int) bool {
+		return mapped[i].line < mapped[j].line
+	})
+	for j := range mapped {
+		if mapped[j].resp != nil {
+			rendered, _ := mapped[j].resp.MarshalYAMLInline()
+			m.Content = append(m.Content, utils.CreateStringNode(mapped[j].code))
+			m.Content = append(m.Content, rendered.(*yaml.Node))
+
+		}
+		if mapped[j].ext != nil {
+			m.Content = append(m.Content, utils.CreateStringNode(mapped[j].code))
+			m.Content = append(m.Content, mapped[j].ext)
+		}
+
+	}
+	return m, nil
 }
 
 // MarshalYAML will create a ready to render YAML representation of the Responses object.

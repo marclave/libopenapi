@@ -101,8 +101,21 @@ func (o *Operation) Render() ([]byte, error) {
 	return yaml.Marshal(o)
 }
 
+// Render will return a YAML representation of the Operation object as a byte slice.
+func (o *Operation) RenderInline() ([]byte, error) {
+	d, _ := o.MarshalYAMLInline()
+	return yaml.Marshal(d)
+}
+
 // MarshalYAML will create a ready to render YAML representation of the Operation object.
 func (o *Operation) MarshalYAML() (interface{}, error) {
 	nb := high.NewNodeBuilder(o, o.low)
+	return nb.Render(), nil
+}
+
+// MarshalYAMLInline will create a ready to render YAML representation of the Operation object.
+func (o *Operation) MarshalYAMLInline() (interface{}, error) {
+	nb := high.NewNodeBuilder(o, o.low)
+	nb.Resolve = true
 	return nb.Render(), nil
 }

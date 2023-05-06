@@ -10,7 +10,7 @@ import (
 )
 
 // RequestBody represents a high-level OpenAPI 3+ RequestBody object, backed by a low-level one.
-//  - https://spec.openapis.org/oas/v3.1.0#request-body-object
+//   - https://spec.openapis.org/oas/v3.1.0#request-body-object
 type RequestBody struct {
 	Description string                `json:"description,omitempty" yaml:"description,omitempty"`
 	Content     map[string]*MediaType `json:"content,omitempty" yaml:"content,omitempty"`
@@ -47,8 +47,21 @@ func (r *RequestBody) Render() ([]byte, error) {
 	return yaml.Marshal(r)
 }
 
+// Render will return a YAML representation of the RequestBody object as a byte slice.
+func (r *RequestBody) RenderInline() ([]byte, error) {
+	d, _ := r.MarshalYAMLInline()
+	return yaml.Marshal(d)
+}
+
 // MarshalYAML will create a ready to render YAML representation of the RequestBody object.
 func (r *RequestBody) MarshalYAML() (interface{}, error) {
 	nb := high.NewNodeBuilder(r, r.low)
+	return nb.Render(), nil
+}
+
+// MarshalYAML will create a ready to render YAML representation of the RequestBody object.
+func (r *RequestBody) MarshalYAMLInline() (interface{}, error) {
+	nb := high.NewNodeBuilder(r, r.low)
+	nb.Resolve = true
 	return nb.Render(), nil
 }

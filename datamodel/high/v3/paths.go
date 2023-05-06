@@ -70,12 +70,13 @@ func (p *Paths) Render() ([]byte, error) {
 	return yaml.Marshal(p)
 }
 
+// RenderInline will return a YAML representation of the Paths object as a byte slice.
 func (p *Paths) RenderInline() ([]byte, error) {
 	d, _ := p.MarshalYAMLInline()
 	return yaml.Marshal(d)
 }
 
-// MarshalYAML will create a ready to render YAML representation of the Paths object.
+// MarshalYAMLInline will create a ready to render YAML representation of the Paths object.
 func (p *Paths) MarshalYAMLInline() (interface{}, error) {
 	// map keys correctly.
 	m := utils.CreateEmptyMapNode()
@@ -118,7 +119,7 @@ func (p *Paths) MarshalYAMLInline() (interface{}, error) {
 	})
 	for j := range mapped {
 		if mapped[j].pi != nil {
-			rendered, _ := mapped[j].pi.MarshalYAML()
+			rendered, _ := mapped[j].pi.MarshalYAMLInline()
 			m.Content = append(m.Content, utils.CreateStringNode(mapped[j].path))
 			m.Content = append(m.Content, rendered.(*yaml.Node))
 		}
